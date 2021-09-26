@@ -1,5 +1,6 @@
 package me.lordmefloun.partysystem;
 
+import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 
 import java.util.HashMap;
@@ -28,26 +29,27 @@ public class PartyObject {
 
     public void invite(ProxiedPlayer p, ProxiedPlayer inviter){
         if (inviter == getLeader()) {
-            if (players.containsKey(p)) {
+            if (!players.containsKey(p)) {
                 if (!isInvited(p)) {
                     invited.add(p);
-                    broadcastParty(Utils.getPrefix() + " &aHráč &d" + p.getDisplayName() + "&a byl pozván do invite");
+                    broadcastParty(Utils.getPrefix() + " &aHráč &d" + p.getDisplayName() + "&a byl pozván");
                 } else {
                     broadcastParty(Utils.getPrefix() + " &aHráč &c" + p.getDisplayName() + "&c byl již pozván");
                 }
-            } else {
+            } else if (players.containsKey(p)) {
                 broadcastParty(Utils.getPrefix() + " &cHráč &d" + p.getDisplayName() + "&c je již v party!");
             }
         }
-        else broadcastParty(Utils.getPrefix() + " &cNejsi leader této party");
 
     }
 
     public void join(ProxiedPlayer p){
         if (invited.contains(p)){
-            invited.remove(p);
-            players.put(p, Roles.GUEST);
-            broadcastParty(Utils.getPrefix() + "&aHráč &d" + p.getDisplayName() + "&a se připojil do party");
+            if (!isInParty(p)) {
+                invited.remove(p);
+                players.put(p, Roles.GUEST);
+                broadcastParty(Utils.getPrefix() + " &aHráč &d" + p.getDisplayName() + "&a se připojil do party");
+            } else Utils.sendMessage(p, "&cJiž jsi nějaké party připojen");
         }else {
             Utils.sendMessage(p, "&cDo této party nejsi pozvaný");
         }
@@ -67,6 +69,15 @@ public class PartyObject {
         return null;
     }
 
+    public void leave(ProxiedPlayer p){
+        broadcastParty(Utils.getPrefix() + " &a" + p.getDisplayName() + "&c se odpojil z party");
+        if (getLeader() == p) {
+            destroy();
+        } else{
+            players.remove(p);
+        }
+    }
+
     public boolean isInvited(ProxiedPlayer p){
         if (invited.contains(p)){
             return true;
@@ -84,4 +95,26 @@ public class PartyObject {
         return false;
     }
 
+    public static PartyObject getPlayerParty(ProxiedPlayer player){
+        for (PartyObject party: parties){
+            for (Map.Entry<ProxiedPlayer, Roles> entry : party.players.entrySet()) {
+                if (player == entry.getKey()) return party;
+            }
+        }
+        return null;
+    }
+
+    public void destroy(){
+        broadcastParty("&cParty byla zrušena");
+        players.clear();
+        invited.clear();
+        PartyObject.parties.remove(this);
+    }
+
+    public void joinServer(ServerInfo server){
+        for (Map.Entry<ProxiedPlayer, Roles> entry : players.entrySet()) {
+            if (entry.getKey() != getLeader())
+                entry.getKey().connect(server);
+        }
+    }
 }

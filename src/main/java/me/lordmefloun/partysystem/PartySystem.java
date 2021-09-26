@@ -6,7 +6,8 @@ public final class PartySystem extends Plugin {
 
     @Override
     public void onEnable() {
-        getProxy().getPluginManager().registerCommand(this, new PartyCommand());
+        getProxy().getPluginManager().registerCommand(this, new PartyCommand(this));
+        getProxy().getPluginManager().registerListener(this, new Listeners());
     }
 
     @Override
